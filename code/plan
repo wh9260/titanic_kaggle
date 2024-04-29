@@ -1,0 +1,23 @@
+Task:
+
+1. Load data
+2. Clean dat
+3. Look at basic relationships
+4. Build model to predict survival based on data.
+5. Train model
+6. Submit
+
+The Data:
+
+PassengerID. int.
+Survived. int. Did they survive?
+Pclas. int. Ticket Class. Factor?
+Name. chr.
+Sex. chr. Sex. Factor?
+Age. int.
+SibSp. int. Number of siblings or spouces aboard.
+Parch. int. Number of parents or children aboard.
+Ticket. chr. Ticket number.
+Fare. num. Passenger Fare.
+Cabin. chr. Cabin number.
+Embarked. chr. Port of enbarkation. Cherbourg/Quessntown/Southampton
