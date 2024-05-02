@@ -1,8 +1,13 @@
 #Load libraries
 
-library('tidyr')
+library(tidyr)
 library(dplyr)
 library(ggplot2)
+library(corrplot)
+library(lessR)
+
+
+
 rm(list = ls())
 
 #Load data
@@ -46,3 +51,30 @@ ggplot(training, aes(x=SibSp)) +
 
 breaks = seq(from = -0.5, to = 10.5, by = 1)
 hist(training$Parch, breaks = breaks)
+
+
+#Look at correlation between numeric variables.
+corrplot(cor(df_num, use = "complete.obs"), method = 'color', diag = 0)
+
+
+pv_Age <- pivot(training, mean, Age, Survived)
+pv_Fare <- pivot(training, mean, Fare, Survived)
+pv_Parch <- pivot(training, mean, Parch, Survived)
+pv_SibSp <- pivot(training, mean, SibSp, Survived)
+
+ggplot(data = count(training, Survived), aes(x = Survived, y = n)) +
+    geom_bar(stat = "identity") +
+    labs(title = "Titanic Deaths", x = "Survived", y = "Count") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    #scale_x_discrete(labels = c("Yes", "No")) +
+    scale_y_continuous(breaks=seq(0,800,50))
+    
+
+
+
+
+
+
+
+
+
