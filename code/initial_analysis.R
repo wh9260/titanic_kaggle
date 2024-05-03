@@ -5,6 +5,7 @@ library(dplyr)
 library(ggplot2)
 library(corrplot)
 library(lessR)
+library(forcats)
 
 
 
@@ -17,6 +18,10 @@ training <- read.csv('./data/train.csv')
 training$Sex <- as.factor(training$Sex)
 training$Pclass <- as.factor(training$Pclass)
 training$Embarked <- as.factor(training$Embarked)
+
+# Replace the two embarkation data missing, confirmed from Southampton
+
+training$Embarked[training$Embarked == ""] <- "S"
 
 #Create a pivot table to compare survival to sex
 
@@ -62,12 +67,58 @@ pv_Fare <- pivot(training, mean, Fare, Survived)
 pv_Parch <- pivot(training, mean, Parch, Survived)
 pv_SibSp <- pivot(training, mean, SibSp, Survived)
 
+
+#Plot 6 bar charts for the categorical data
+#1 - Overall survived
+
 ggplot(data = count(training, Survived), aes(x = Survived, y = n)) +
     geom_bar(stat = "identity") +
     labs(title = "Titanic Deaths", x = "Survived", y = "Count") +
     theme(plot.title = element_text(hjust = 0.5)) +
-    #scale_x_discrete(labels = c("Yes", "No")) +
     scale_y_continuous(breaks=seq(0,800,50))
+
+#2 - Pclass
+
+ggplot(data = count(training,Pclass), aes(x = Pclass, y = n)) +
+    geom_bar(stat = "identity") +
+    labs(title = "Titanic Deaths by Class", x = "Class", y = "Count") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    scale_x_discrete(labels = c("First", "Second", "Third")) +
+    geom_text(aes(label = n), vjust = -0.4)
+
+#3 - Sex
+
+ggplot(data = count(training,Sex), aes(x = Sex, y = n)) +
+    geom_bar(stat = "identity") +
+    labs(title = "Titanic Deaths by Sex", x = "Sex", y = "Count") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    scale_x_discrete(labels = c("Male", "Female")) +
+    geom_text(aes(label = n), vjust = -0.4)
+
+#4 - Ticket
+
+training %>% count(Ticket) %>% mutate(Ticket = fct_rev(fct_reorder(Ticket,n))) %>% ggplot(aes(x = Ticket, y = n)) +
+    geom_bar(stat = "identity") +
+    labs(title = "Titanic Deaths by Ticket", x = "Ticket", y = "Count") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    geom_text(aes(label = n), vjust = -0.4)
+
+#5 - Cabin
+
+training %>% count(Cabin) %>% mutate(Cabin = fct_rev(fct_reorder(Cabin,n))) %>% ggplot(aes(x = Cabin, y = n)) +
+    geom_bar(stat = "identity") +
+    labs(title = "Titanic Deaths by Cabin", x = "Cabin", y = "Count") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    geom_text(aes(label = n), vjust = -0.4)
+
+#6 - Embarked
+
+training %>% count(Embarked) %>% mutate(Embarked = fct_rev(fct_reorder(Embarked,n))) %>% ggplot(aes(x = Embarked, y = n)) +
+    geom_bar(stat = "identity") +
+    labs(title = "Titanic Deaths by Cabin", x = "Embarked", y = "Count") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    geom_text(aes(label = n), vjust = -0.4)
+
     
 
 
