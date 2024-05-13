@@ -63,9 +63,13 @@ corrplot(cor(df_num, use = "complete.obs"), method = 'color', diag = 0)
 
 
 pv_Age <- pivot(training, mean, Age, Survived)
+print(pv_Age)
 pv_Fare <- pivot(training, mean, Fare, Survived)
+print(pv_Fare)
 pv_Parch <- pivot(training, mean, Parch, Survived)
+print(pv_Parch)
 pv_SibSp <- pivot(training, mean, SibSp, Survived)
+print(pv_SibSp)
 
 
 #Plot 6 bar charts for the categorical data
@@ -119,6 +123,9 @@ training %>% count(Embarked) %>% mutate(Embarked = fct_rev(fct_reorder(Embarked,
     theme(plot.title = element_text(hjust = 0.5)) +
     geom_text(aes(label = n), vjust = -0.4)
 
+#Pivot tables comparing survival by the categorical types
+
+df_cat %>% table(df_cat$Survived)
     
 
 
