@@ -126,6 +126,8 @@ for (i in 1:length(df_cat$Cabin)){
     }
 }
 
+#Count number of cabin types
+
 cabin_adv_table <- as.data.frame(table(df_cat$cabin_adv))
 
 ggplot(data = cabin_adv_table, aes(x = Var1, y = Freq)) +
@@ -136,11 +138,21 @@ ggplot(data = cabin_adv_table, aes(x = Var1, y = Freq)) +
 
 #Pivot table showing survival by cabin letter
 
-table(df_cat$Survived, df_cat$cabin_adv) %>%
+survival_by_cabin_adv <- table(df_cat$Survived, df_cat$cabin_adv) %>%
     as.data.frame() %>%
     pivot_wider(names_from = Var2, values_from = Freq)
 
+#Look at letters within the ticket value, numeric or string.
+#First, is numeric or not.
 
-
+for (i in 1:length(training$Ticket)){
+    
+    if (is.na(as.numeric(training$Ticket[i]))){
+        training$ticket_letters <- "x"
+    }
+    else {
+        training$numeric_ticket[i] <-  as.numeric(training$Ticket[i])
+    }
+}
 
 
