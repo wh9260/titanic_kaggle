@@ -145,14 +145,36 @@ survival_by_cabin_adv <- table(df_cat$Survived, df_cat$cabin_adv) %>%
 #Look at letters within the ticket value, numeric or string.
 #First, is numeric or not.
 
+training$ticket_letters <- NA
+training$numeric_ticket <- NA
+
 for (i in 1:length(training$Ticket)){
     
     if (is.na(as.numeric(training$Ticket[i]))){
-        training$ticket_letters <- "x"
+        
+        training$ticket_letters[i] <- str_to_lower(str_remove_all(str_split_1(training$Ticket[i]," ")[1], "[/.]"))#training$Ticket[i] %>%
+            # str_split_1(" ")[1] %>%
+            # str_remove("[/.") %>%
+            # str_to_lower()
+        training$numeric_ticket[i] <- 0
     }
     else {
-        training$numeric_ticket[i] <-  as.numeric(training$Ticket[i])
+        training$numeric_ticket[i] <- 1
     }
 }
+
+survived_by_numeric_ticket <- table(training$numeric_ticket, training$Survived) %>%
+    as.data.frame() %>%
+    pivot_wider(names_from = Var1, values_from = Freq)
+
+survived_by_ticket_letters <- table(training$Survived, training$ticket_letters) %>%
+    as.data.frame() %>%
+    pivot_wider(names_from = Var2, values_from = Freq)
+
+
+
+
+
+
 
 
