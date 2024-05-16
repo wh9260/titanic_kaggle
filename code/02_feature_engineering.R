@@ -171,6 +171,13 @@ survived_by_ticket_letters <- table(training$Survived, training$ticket_letters) 
     as.data.frame() %>%
     pivot_wider(names_from = Var2, values_from = Freq)
 
+for (i in 1:length(training$Name)){
+    
+    training$name_title[i] <- str_split_1(training$Name[i], ", ")[2]
+    training$name_title[i] <- str_split_1(training$name_title[i], " ")[1]
+    training$name_title[i] <- str_remove_all(training$name_title[i],"[.]")
+}
+ 
 
 
 
