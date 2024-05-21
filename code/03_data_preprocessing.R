@@ -113,7 +113,7 @@ y <- as.factor(training_set$Survived)
 
 #Naive Bayes
 
-train_control <- trainControl(method = "cv", number = 5)
+train_control <- trainControl(method = "cv", number = 10)
 
 nb.m1 <- train(x = x, y = y, method = "nb", trControl = train_control)
 
@@ -121,7 +121,7 @@ confusionMatrix(nb.m1)
 
 #Linear regression
 
-train_control <- trainControl(method = "cv", number = 5)
+train_control <- trainControl(method = "cv", number = 4)
 
 nb.m2 <- train(x = x, y = y, method = "glm", trControl = train_control)
 
