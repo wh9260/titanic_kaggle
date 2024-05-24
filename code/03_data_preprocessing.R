@@ -40,7 +40,7 @@ alldata$norm_sibsq <- log(alldata$SibSp + 1)
 alldata$norm_fare <- log(alldata$Fare + 1)
 
 #Convert fare to str type
-alldata$Pclass <- as.character(alldata$Pclass)
+alldata$Pclass <- as.factor(alldata$Pclass)
 
 alldata$Embarked <- as.factor(alldata$Embarked)
 
@@ -99,6 +99,7 @@ for (i in 1:length(alldata$Name)){
 }
 
 
+alldata$cabin_adv <- as.factor(alldata$cabin_adv)
 
 #Create training and test sets
 #Training set without Survived
@@ -106,7 +107,11 @@ for (i in 1:length(alldata$Name)){
 training_set <- alldata %>% filter(train_test == 1)
 test_set <- alldata %>% filter(train_test == 0)
 
-features <- setdiff(names(training_set), c("Survived", "Name", "PassengerId", "Ticket", "Cabin", "ticket_letters"))
+save(alldata, file = "./data/alldata.Rda")
+save(training_set, file = "./data/training_set.Rda")
+save(test_set, file = "./data/test_set.Rda")
+
+features <- setdiff(names(training_set), c("Survived", "Name", "PassengerId", "Ticket", "Cabin", "ticket_letters", "train_test"))
 
 x <- training_set[,features]
 y <- as.factor(training_set$Survived)
