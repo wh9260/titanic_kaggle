@@ -8,6 +8,8 @@ library(corrplot)
 library(lessR)
 library(forcats)
 library(stringr)
+library(rpart)
+library(rpart.plot)
 
 rm(list = ls())
 
@@ -43,6 +45,7 @@ alldata$norm_fare <- log(alldata$Fare + 1)
 alldata$Pclass <- as.factor(alldata$Pclass)
 
 alldata$Embarked <- as.factor(alldata$Embarked)
+alldata$Sex <- as.factor(alldata$Sex)
 
 #Recreate feature engineering columns as per 02_...
 
@@ -100,6 +103,9 @@ for (i in 1:length(alldata$Name)){
 
 
 alldata$cabin_adv <- as.factor(alldata$cabin_adv)
+alldata$name_title <- as.factor(alldata$name_title)
+alldata$cabin_multiple <- as.factor(alldata$cabin_multiple)
+alldata$numeric_ticket <- as.factor(alldata$numeric_ticket)
 
 #Create training and test sets
 #Training set without Survived
@@ -111,7 +117,7 @@ save(alldata, file = "./data/alldata.Rda")
 save(training_set, file = "./data/training_set.Rda")
 save(test_set, file = "./data/test_set.Rda")
 
-features <- setdiff(names(training_set), c("Survived", "Name", "PassengerId", "Ticket", "Cabin", "ticket_letters", "train_test"))
+features <- setdiff(names(training_set), c("cabin_adv", "Survived", "Name", "PassengerId", "Ticket", "Cabin", "ticket_letters", "train_test"))
 
 x <- training_set[,features]
 y <- as.factor(training_set$Survived)
@@ -132,4 +138,11 @@ nb.m2 <- train(x = x, y = y, method = "glm", trControl = train_control)
 
 confusionMatrix(nb.m2)
 
+#Decision tree
+
+features <- setdiff(names(training_set), c("PassangerId", "Name", "Ticket", "Cabin", "ticket_letters", "train_test"))
+dt_x <- training_set[,features]
+
+dt_m1 <- rpart(Survived ~ ., data = dt_x, method = "class")
+rpart.plot(dt_m1, extra = 106)
 
