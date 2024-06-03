@@ -1,4 +1,5 @@
 #Prelim
+library(tidymodels)
 library(klaR)
 library(caret)
 library(tidyr)
@@ -10,13 +11,17 @@ library(forcats)
 library(stringr)
 library(rpart)
 library(rpart.plot)
-library(tidymodels)
-library(yardstick)
+library(discrim)
+library(purrr)
+library(doParallel)
+library(kknn)
 
+#Clear environment
 rm(list = ls())
 
-#Concat training and test into alldata
+##Concatenate training and test into alldata
 
+#Load files
 training <- read.csv('./data/train.csv')
 test <- read.csv('./data/test.csv')
 
@@ -43,14 +48,7 @@ alldata$Fare[is.na(alldata$Fare)] <- median(alldata$Fare, na.rm = TRUE)
 alldata$norm_sibsq <- log(alldata$SibSp + 1)
 alldata$norm_fare <- log(alldata$Fare + 1)
 
-#Convert fare to str type
-alldata$Pclass <- as.factor(alldata$Pclass)
-
-alldata$Embarked <- as.factor(alldata$Embarked)
-alldata$Sex <- as.factor(alldata$Sex)
-
 #Recreate feature engineering columns as per 02_...
-
 #Cabin multiple
 
 for (i in 1:length(alldata$Cabin)){
@@ -103,11 +101,15 @@ for (i in 1:length(alldata$Name)){
     
 }
 
-
+#Factorise other variable
+alldata$Embarked <- as.factor(alldata$Embarked)
+alldata$Sex <- as.factor(alldata$Sex)
 alldata$cabin_adv <- as.factor(alldata$cabin_adv)
 alldata$name_title <- as.factor(alldata$name_title)
 alldata$cabin_multiple <- as.factor(alldata$cabin_multiple)
 alldata$numeric_ticket <- as.factor(alldata$numeric_ticket)
+alldata$Pclass <- as.factor(alldata$Pclass)
+
 
 #Create training and test sets
 #Training set without Survived
@@ -115,36 +117,110 @@ alldata$numeric_ticket <- as.factor(alldata$numeric_ticket)
 training_set <- alldata %>% filter(train_test == 1)
 test_set <- alldata %>% filter(train_test == 0)
 
+training_set$Survived <- as.factor(training_set$Survived)
+
 save(alldata, file = "./data/alldata.Rda")
 save(training_set, file = "./data/training_set.Rda")
 save(test_set, file = "./data/test_set.Rda")
 
-features <- setdiff(names(training_set), c("cabin_adv", "Survived", "Name", "PassengerId", "Ticket", "Cabin", "ticket_letters", "train_test"))
+##Apply Tidymodel approach to analysis
 
-x <- training_set[,features]
-y <- as.factor(training_set$Survived)
+#Define which features are used to model. Those in c() are not used.
+
+feat <- setdiff(names(training_set), c("PassangerId", "Name", "Ticket", "Cabin", "ticket_letters", "train_test"))
+x <- training_set[, feat]
 
 #Naive Bayes
 
-train_control <- trainControl(method = "cv", number = 10)
+nb_spec <- naive_Bayes() %>%
+    set_mode("classification") %>%
+    set_engine("klaR")%>%
+    set_args(usekernel = FALSE)
 
-nb.m1 <- train(x = x, y = y, method = "nb", trControl = train_control)
+nb_fit <- nb_spec %>%
+    fit(Survived ~ ., data = x)
 
-confusionMatrix(nb.m1)
+#Logistic regression
 
-#Linear regression
+lr_spec <- logistic_reg() %>%
+    set_engine("glm") %>%
+    set_mode("classification")
 
-train_control <- trainControl(method = "cv", number = 4)
+lr_fit <- lr_spec%>%
+    fit(Survived ~ ., data = x)
 
-nb.m2 <- train(x = x, y = y, method = "glm", trControl = train_control)
-
-confusionMatrix(nb.m2)
+lr_fit %>%
+    pluck("fit") %>%
+    summary()
 
 #Decision tree
 
-features <- setdiff(names(training_set), c("PassangerId", "Name", "Ticket", "Cabin", "ticket_letters", "train_test"))
-dt_x <- training_set[,features]
+dt_spec <- decision_tree() %>%
+    set_engine("rpart") %>%
+    set_mode("classification")
 
-dt_m1 <- rpart(Survived ~ ., data = dt_x, method = "class")
-rpart.plot(dt_m1, extra = 106)
+dt_fit <- dt_spec %>%
+    fit(Survived ~ ., data = x)
+
+dt_fit %>%
+    extract_fit_engine() %>%
+    rpart.plot()
+
+dt_fit %>%
+    pluck("fit") %>%
+    summary()
+
+augment(dt_fit, new_data = x) %>%
+    accuracy(truth = Survived, estimate = .pred_class)
+
+augment(dt_fit, new_data = x) %>%
+    conf_mat(truth = Survived, estimate = .pred_class)
+
+
+
+
+#Tunable decision tree
+#Applying tuning from https://juliasilge.com/blog/wind-turbine/
+
+dt_x <- x
+
+dt_x$Survived_numeric <- as.integer(x$Survived)
+
+dt2_folds <- vfold_cv(dt_x, strata = Survived_numeric)
+
+dt2_spec <- decision_tree(
+    cost_complexity = tune(),
+    tree_depth = tune(),
+    min_n = tune()
+) %>%
+    set_engine("rpart") %>%
+    set_mode("regression")
+
+dt2_grid <- grid_regular(cost_complexity(), tree_depth(), min_n(), levels = 4)
+
+doParallel::registerDoParallel()
+
+tree_rs <- tune_grid(
+    dt2_spec,
+    Survived_numeric ~ .,
+    resamples = dt2_folds,
+    grid = dt2_grid,
+    metrics = metric_set(rmse, rsq, mae, mape)
+)
+
+#KNN
+
+kknn_x <- x
+
+kknn_spec <- nearest_neighbor() %>%
+    set_engine("kknn") %>%
+    set_mode("classification")
+
+kknn_fit <- kknn_spec %>%
+    fit(Survived ~ ., data = kknn_x)
+
+
+
+
+
 
