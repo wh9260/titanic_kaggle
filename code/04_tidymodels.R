@@ -15,6 +15,7 @@ library(discrim)
 library(purrr)
 library(doParallel)
 library(kknn)
+library(ranger)
 
 #Clear environment
 rm(list = ls())
@@ -140,6 +141,8 @@ nb_spec <- naive_Bayes() %>%
 nb_fit <- nb_spec %>%
     fit(Survived ~ ., data = x)
 
+confusionMatrix(x$Survived, predict(nb_fit, x)$.pred_class)
+
 #Logistic regression
 
 lr_spec <- logistic_reg() %>%
@@ -152,6 +155,34 @@ lr_fit <- lr_spec%>%
 lr_fit %>%
     pluck("fit") %>%
     summary()
+
+confusionMatrix(x$Survived, predict(lr_fit, x)$.pred_class)
+
+#Logistic regression with Workflow
+
+lr_wf_spec <- logistic_reg() %>%
+    set_engine("glm")
+
+lr_wf <- workflow() %>%
+    add_formula(Survived ~.)
+
+x_boot <- bootstraps(x)
+    
+lr_wf_fit <- lr_wf %>%
+    add_model(lr_wf_spec) %>%
+    fit_resamples(
+        resamples = x_boot,
+        control = control_resamples(save_pred = TRUE)
+        )
+    
+lr_wf_fit %>%
+    collect_predictions() %>%
+    roc_curve(Survived, .pred_0) %>%
+    ggplot(aes(1 - specificity, sensitivity)) +
+    geom_abline(lty = 2, color = "gray80", size = 1.5) +
+    geom_path(show.legend = FALSE, alpha = 0.6, size = 1.2) +
+    coord_equal()
+
 
 #Decision tree
 
@@ -175,9 +206,6 @@ augment(dt_fit, new_data = x) %>%
 
 augment(dt_fit, new_data = x) %>%
     conf_mat(truth = Survived, estimate = .pred_class)
-
-
-
 
 #Tunable decision tree
 #Applying tuning from https://juliasilge.com/blog/wind-turbine/
@@ -220,7 +248,27 @@ kknn_fit <- kknn_spec %>%
     fit(Survived ~ ., data = kknn_x)
 
 
+#Random forest
 
+rf_spec <- rand_forest() %>%
+    set_mode("classification") %>%
+    set_engine("ranger")
 
+rf_wf <- workflow() %>%
+    add_formula(Survived ~.)
 
+rf_fit <- lr_wf %>%
+    add_model(rf_spec) %>%
+    fit_resamples(
+        resamples = x_boot,
+        control = control_resamples(save_pred = TRUE)
+    )
+
+rf_fit %>%
+    collect_predictions() %>%
+    roc_curve(Survived, .pred_0) %>%
+    ggplot(aes(1 - specificity, sensitivity)) +
+    geom_abline(lty = 2, color = "gray80", size = 1.5) +
+    geom_path(show.legend = FALSE, alpha = 0.6, size = 1.2) +
+    coord_equal()
 
