@@ -1,0 +1,151 @@
+---
+title: "Exploring Naive-Bayes"
+author: "W Haine"
+date: "18th June 2024"
+output: html_document
+---
+```{r, include = FALSE}
+# Load required libraries:
+library(tidyverse)
+library(tidymodels)
+library(klaR)
+library(caret)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(lessR)
+library(forcats)
+library(stringr)
+library(rpart)
+library(rpart.plot)
+library(discrim)
+library(purrr)
+library(doParallel)
+library(kknn)
+library(ranger)
+```
+
+This document outlines the use of a Naive-Bayes model. This includes loading of data, fitting of the
+model, and measurement of the accuracy of the model.
+
+1. Load data:
+---
+
+```{r}
+
+# Load training data:
+training <- read_csv('./data/train.csv')
+# Load testing set:
+test <- read.csv('./data/test.csv')
+```
+
+2. Wrangle data, ready for applying of models.
+
+```{r}
+#Indicate which should be used for training
+training$train_test <- 1
+test$train_test <- 0
+
+#Not know as need to be predicted
+test$Survived <- NaN
+
+#Join
+alldata <- rbind(training, test)
+
+#Fill empty ages with median
+
+alldata$Age[is.na(alldata$Age)] <- median(alldata$Age, na.rm = TRUE)
+
+#Fill empty fares with median
+
+alldata$Fare[is.na(alldata$Fare)] <- median(alldata$Fare, na.rm = TRUE)
+
+#Find logs of SibSq and fare
+
+alldata$norm_sibsq <- log(alldata$SibSp + 1)
+alldata$norm_fare <- log(alldata$Fare + 1)
+
+#Recreate feature engineering columns as per 02_...
+#Cabin multiple
+
+for (i in 1:length(alldata$Cabin)){
+    
+    if (alldata$Cabin[i] == ""){
+        alldata$cabin_multiple[i] <- 0
+    }
+    else {
+        alldata$cabin_multiple[i] <- length(str_split(alldata$Cabin[i], " ")[[1]])
+    }
+}
+
+#Cabin adv
+
+for (i in 1:length(alldata$Cabin)){
+    
+    if (alldata$Cabin[i] == ""){
+        alldata$cabin_adv[i] <- 'n'
+    }
+    else {
+        alldata$cabin_adv[i] <-  substring(alldata$Cabin[i],1,1)
+    }
+}
+
+#Numeric ticket and ticket letters
+
+alldata$ticket_letters <- NA
+alldata$numeric_ticket <- NA
+
+for (i in 1:length(alldata$Ticket)){
+    
+    if (is.na(as.numeric(alldata$Ticket[i]))){
+        
+        alldata$ticket_letters[i] <- str_to_lower(str_remove_all(str_split_1(alldata$Ticket[i]," ")[1], "[/.]"))#training$Ticket[i] %>%
+        # str_split_1(" ")[1] %>%
+        # str_remove("[/.") %>%
+        # str_to_lower()
+        alldata$numeric_ticket[i] <- 0
+    }
+    else {
+        alldata$numeric_ticket[i] <- 1
+    }
+}
+
+#Name title
+
+for (i in 1:length(alldata$Name)){
+    
+    alldata$name_title[i] <- str_split_i(str_split_1(alldata$Name[i], "[.]")[1], " ",-1)
+    
+}
+
+#Factorise other variable
+alldata$Embarked <- as.factor(alldata$Embarked)
+alldata$Sex <- as.factor(alldata$Sex)
+alldata$cabin_adv <- as.factor(alldata$cabin_adv)
+alldata$name_title <- as.factor(alldata$name_title)
+alldata$cabin_multiple <- as.factor(alldata$cabin_multiple)
+alldata$numeric_ticket <- as.factor(alldata$numeric_ticket)
+alldata$Pclass <- as.factor(alldata$Pclass)
+
+
+#Create training and test sets
+#Training set without Survived
+
+training_set <- alldata %>% filter(train_test == 1)
+test_set <- alldata %>% filter(train_test == 0)
+
+training_set$Survived <- as.factor(training_set$Survived)
+
+save(alldata, file = "./data/alldata.Rda")
+save(training_set, file = "./data/training_set.Rda")
+save(test_set, file = "./data/test_set.Rda")
+
+##Apply Tidymodel approach to analysis
+
+#Define which features are used to model. Those in c() are not used.
+
+feat <- setdiff(names(training_set), c("PassangerId", "Name", "Ticket", "Cabin", "ticket_letters", "train_test"))
+x <- training_set[, feat]
+```
+
